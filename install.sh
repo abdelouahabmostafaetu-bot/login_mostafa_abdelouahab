@@ -43,11 +43,14 @@ check_root() {
 install_deps() {
     msg "Checking dependencies..."
     if command -v pacman &>/dev/null; then
-        pacman -S --needed --noconfirm python python-pam 2>/dev/null || true
+        pacman -S --needed --noconfirm python python-pam \
+            plasma-wayland-session qt6-wayland 2>/dev/null || true
     elif command -v apt-get &>/dev/null; then
-        apt-get install -y python3 python3-pam 2>/dev/null || true
+        apt-get install -y python3 python3-pam \
+            kde-plasma-desktop plasma-workspace-wayland 2>/dev/null || true
     elif command -v dnf &>/dev/null; then
-        dnf install -y python3 python3-pam 2>/dev/null || true
+        dnf install -y python3 python3-pam \
+            plasma-workspace-wayland qt6-qtwayland 2>/dev/null || true
     fi
     ok "Dependencies checked"
 }
@@ -94,6 +97,8 @@ TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
 TTYVTDisallocate=yes
+Environment=XDG_SESSION_TYPE=wayland
+Environment=QT_QPA_PLATFORM=wayland
 Restart=always
 RestartSec=1
 

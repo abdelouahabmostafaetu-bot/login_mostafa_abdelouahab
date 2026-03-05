@@ -20,9 +20,11 @@
   wave, rain with lightning, DNA helix, cyber grid, glitch effect, name particles
 - **7 Color Themes**: Cyber, Ocean, Forest, Sunset, Neon, Blood, Ice
 - **5 Box Styles**: Single, Double, Rounded, Heavy, ASCII
+- **Plasma Wayland First-Class Support**: Auto-detects `startplasma-wayland`, sets
+  `XDG_SESSION_DESKTOP=KDE`, `QT_QPA_PLATFORM=wayland`, and launches via `dbus-run-session`
 - **Mathematician Identity Card**: Personalized portrait & math branding
 - **Elegant Hacker Aesthetic**: Glowing borders, animated branding, Unicode art
-- **Session Discovery**: Auto-detects X11/Wayland/TTY desktop sessions
+- **Session Discovery**: Auto-detects Wayland/X11/TTY desktop sessions (Wayland preferred)
 - **Authentication**: PAM, shadow passwords, or su-based (Python 3.13+ compatible)
 - **Welcome Animation**: Cinematic intro with loading bar
 - **Power Menu**: Shutdown, reboot, suspend, hibernate
@@ -158,10 +160,21 @@ login_them/
 - **Optional**: `python-pam` for PAM authentication
 - **Optional**: UTF-8 terminal with Unicode support
 
+### For KDE Plasma (Wayland)
+
+- `plasma-wayland-session` (or `plasma-workspace-wayland` on Debian/Fedora)
+- `qt6-wayland` (or `qt6-qtwayland` on Fedora)
+- `dbus` (for `dbus-run-session`)
+- `XDG_RUNTIME_DIR` must exist for your user (`/run/user/<uid>`)
+
 ---
 
 ## Notes
 
+- **Wayland is the default**: Sessions are discovered from `/usr/share/wayland-sessions` first;
+  `preferred_type = wayland` in config auto-selects the first Wayland session
+- Plasma Wayland is launched with `dbus-run-session startplasma-wayland` with proper
+  `XDG_SESSION_DESKTOP=KDE`, `QT_QPA_PLATFORM=wayland` environment
 - Python 3.13+ removed `crypt` and `spwd` modules — AM-Login automatically
   falls back to `su`-based authentication
 - For best visuals, use a terminal with full Unicode and 256-color support

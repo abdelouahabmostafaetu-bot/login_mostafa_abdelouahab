@@ -95,7 +95,7 @@ class AMLogin:
         self.auth = get_authenticator(demo_mode=args.demo)
 
         # Sessions
-        self.sessions = SessionManager()
+        self.sessions = SessionManager(preferred_type=self.config.preferred_session_type)
 
         # State
         self.frame = 0

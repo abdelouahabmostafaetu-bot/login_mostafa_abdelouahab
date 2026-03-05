@@ -36,6 +36,7 @@ class Config:
         },
         "Sessions": {
             "default_session": "0",
+            "preferred_type": "wayland",
         },
         "Appearance": {
             "bg_char": " ",
@@ -147,3 +148,7 @@ class Config:
     @property
     def screensaver_animation(self):
         return self.get("General", "screensaver_animation", "starfield")
+
+    @property
+    def preferred_session_type(self):
+        return self.get("Sessions", "preferred_type", "wayland")

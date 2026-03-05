@@ -38,38 +38,70 @@ class SessionManager:
         "/usr/local/share/wayland-sessions",
     ]
     COMMON_FALLBACKS = {
-        "i3":        ("i3", "x11"),
-        "sway":      ("sway", "wayland"),
-        "openbox":   ("openbox-session", "x11"),
-        "bspwm":     ("bspwm", "x11"),
-        "dwm":       ("dwm", "x11"),
-        "awesome":   ("awesome", "x11"),
-        "hyprland":  ("Hyprland", "wayland"),
-        "plasma":    ("startplasma-x11", "x11"),
-        "gnome":     ("gnome-session", "x11"),
-        "xfce":      ("startxfce4", "x11"),
-        "cinnamon":  ("cinnamon-session", "x11"),
-        "mate":      ("mate-session", "x11"),
-        "lxqt":      ("startlxqt", "x11"),
-        "budgie":    ("budgie-desktop", "x11"),
+        # Wayland sessions (preferred)
+        "plasma-wayland": ("startplasma-wayland", "wayland"),
+        "sway":           ("sway", "wayland"),
+        "hyprland":       ("Hyprland", "wayland"),
+        "gnome-wayland":  ("gnome-session --session=gnome", "wayland"),
+        # X11 sessions
+        "plasma-x11":     ("startplasma-x11", "x11"),
+        "i3":             ("i3", "x11"),
+        "openbox":        ("openbox-session", "x11"),
+        "bspwm":          ("bspwm", "x11"),
+        "dwm":            ("dwm", "x11"),
+        "awesome":        ("awesome", "x11"),
+        "gnome":          ("gnome-session", "x11"),
+        "xfce":           ("startxfce4", "x11"),
+        "cinnamon":       ("cinnamon-session", "x11"),
+        "mate":           ("mate-session", "x11"),
+        "lxqt":           ("startlxqt", "x11"),
+        "budgie":         ("budgie-desktop", "x11"),
     }
 
-    def __init__(self):
+    # Environment variables needed for specific Wayland compositors
+    WAYLAND_ENV = {
+        "plasma-wayland": {
+            "XDG_SESSION_TYPE": "wayland",
+            "XDG_SESSION_DESKTOP": "KDE",
+            "XDG_CURRENT_DESKTOP": "KDE",
+            "QT_QPA_PLATFORM": "wayland",
+            "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
+            "KWIN_COMPOSE": "Q",
+        },
+        "sway": {
+            "XDG_SESSION_TYPE": "wayland",
+            "XDG_SESSION_DESKTOP": "sway",
+            "XDG_CURRENT_DESKTOP": "sway",
+        },
+        "hyprland": {
+            "XDG_SESSION_TYPE": "wayland",
+            "XDG_SESSION_DESKTOP": "Hyprland",
+            "XDG_CURRENT_DESKTOP": "Hyprland",
+        },
+    }
+
+    def __init__(self, preferred_type="wayland"):
         self.sessions = []
         self.current_index = 0
+        self.preferred_type = preferred_type
         self._discover()
+        self._select_preferred()
 
     def _discover(self):
-        """Discover all sessions from .desktop files."""
+        """Discover all sessions from .desktop files.
+
+        Wayland sessions are scanned first and sorted to the top so that
+        compositors like Plasma Wayland appear before their X11 counterparts.
+        """
         self.sessions = []
+
+        # Discover Wayland sessions first (preferred on modern systems)
+        for d in self.WAYLAND_SESSION_DIRS:
+            self._scan_dir(d, "wayland")
 
         # Discover X11 sessions
         for d in self.X_SESSION_DIRS:
             self._scan_dir(d, "x11")
-
-        # Discover Wayland sessions
-        for d in self.WAYLAND_SESSION_DIRS:
-            self._scan_dir(d, "wayland")
 
         # Always add shell/TTY
         self.sessions.append(Session("Shell (TTY)", os.environ.get("SHELL", "/bin/bash"), "tty"))
@@ -77,8 +109,17 @@ class SessionManager:
         # If nothing found, add common fallbacks
         if len(self.sessions) <= 1:
             for name, (cmd, stype) in self.COMMON_FALLBACKS.items():
-                if self._command_exists(cmd):
+                # For fallback commands, check only the binary name (first word)
+                binary = cmd.split()[0]
+                if self._command_exists(binary):
                     self.sessions.insert(-1, Session(name.capitalize(), cmd, stype))
+
+    def _select_preferred(self):
+        """Auto-select the first session matching preferred_type (e.g. 'wayland')."""
+        for i, s in enumerate(self.sessions):
+            if s.session_type == self.preferred_type:
+                self.current_index = i
+                return
 
     def _scan_dir(self, directory, session_type):
         """Scan a directory for .desktop session files."""
@@ -182,17 +223,54 @@ class SessionManager:
             return False, str(e)
 
     def _launch_wayland(self, session, username):
-        """Launch Wayland session."""
+        """Launch Wayland session with proper environment."""
         try:
             vt = self._find_free_vt()
-            env_setup = (
-                f"export XDG_SESSION_TYPE=wayland; "
-                f"export XDG_RUNTIME_DIR=/run/user/$(id -u); "
-                f"exec {session.exec_cmd}"
+
+            # Build environment exports
+            env_lines = []
+            env_lines.append("export XDG_SESSION_TYPE=wayland")
+            env_lines.append("export XDG_RUNTIME_DIR=/run/user/$(id -u)")
+
+            # Ensure XDG_RUNTIME_DIR exists
+            env_lines.append(
+                'if [ ! -d "$XDG_RUNTIME_DIR" ]; then '
+                'mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"; fi'
             )
+
+            # Detect session-specific env (Plasma Wayland, Sway, Hyprland, etc.)
+            session_key = self._match_wayland_env_key(session)
+            if session_key and session_key in self.WAYLAND_ENV:
+                for var, val in self.WAYLAND_ENV[session_key].items():
+                    env_lines.append(f"export {var}={val}")
+            else:
+                # Generic Wayland env fallback
+                env_lines.append("export XDG_SESSION_DESKTOP=wayland")
+
+            # DBus session (needed by KDE Plasma and GNOME)
+            env_lines.append(
+                'if command -v dbus-run-session >/dev/null 2>&1; then '
+                f'exec dbus-run-session {session.exec_cmd}; '
+                f'else exec {session.exec_cmd}; fi'
+            )
+
+            env_setup = "; ".join(env_lines)
             os.execvp("su", ["su", "-l", username, "-c", env_setup])
         except OSError as e:
             return False, str(e)
+
+    def _match_wayland_env_key(self, session):
+        """Match a session to a WAYLAND_ENV key."""
+        name_lower = session.name.lower()
+        exec_lower = session.exec_cmd.lower()
+
+        if "plasma" in name_lower or "startplasma-wayland" in exec_lower:
+            return "plasma-wayland"
+        if "hyprland" in name_lower or "hyprland" in exec_lower:
+            return "hyprland"
+        if "sway" in name_lower or "sway" in exec_lower:
+            return "sway"
+        return None
 
     def _find_free_vt(self):
         """Find a free virtual terminal."""

@@ -20,6 +20,16 @@ export TERM="${TERM:-xterm-256color}"
 export LANG="${LANG:-en_US.UTF-8}"
 export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 
+# Wayland / Plasma session environment
+if [ -z "$XDG_RUNTIME_DIR" ]; then
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    if [ ! -d "$XDG_RUNTIME_DIR" ]; then
+        mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null
+        chmod 0700 "$XDG_RUNTIME_DIR" 2>/dev/null
+    fi
+fi
+export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
+
 ARGS=("$@")
 
 # Default to demo mode if not running as root and --real not specified
