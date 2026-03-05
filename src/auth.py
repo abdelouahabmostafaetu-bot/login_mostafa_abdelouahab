@@ -113,12 +113,7 @@ class SUAuthenticator:
 class DemoAuthenticator:
     """Demo-mode authenticator (no real auth)."""
     DEMO_USERS = {
-        "abdelouahab": "math2024",
-        "admin": "admin",
-        "demo": "demo",
-        "root": "toor",
-        "euler": "e2718",
-        "gauss": "pi314",
+        "Mostafa": "moustapha2003",
     }
 
     def authenticate(self, username, password):

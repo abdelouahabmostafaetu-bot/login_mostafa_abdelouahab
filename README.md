@@ -57,14 +57,9 @@ python3 am_login.py --demo --theme neon --anim matrix
 
 ### Demo Login Credentials
 
-| User         | Password |
-|--------------|----------|
-| abdelouahab  | math2024 |
-| admin        | admin    |
-| demo         | demo     |
-| root         | toor     |
-| euler        | e2718    |
-| gauss        | pi314    |
+| User     | Password       |
+|----------|----------------|
+| Mostafa  | moustapha2003  |
 
 ---
 
