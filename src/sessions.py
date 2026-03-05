@@ -124,8 +124,8 @@ class SessionManager:
     def _command_exists(self, cmd):
         """Check if command is available on the system."""
         try:
-            subprocess.run(["which", cmd], capture_output=True, timeout=3)
-            return True
+            result = subprocess.run(["which", cmd], capture_output=True, timeout=3)
+            return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
 

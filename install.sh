@@ -59,8 +59,10 @@ install_files() {
     cp -r src/*.py "${INSTALL_DIR}/src/"
     cp am_login.py "${INSTALL_DIR}/"
     cp config/default.conf "${INSTALL_DIR}/config/"
+    cp scripts/*.sh "${INSTALL_DIR}/scripts/" 2>/dev/null || true
 
     chmod +x "${INSTALL_DIR}/am_login.py"
+    chmod +x "${INSTALL_DIR}/scripts/"*.sh 2>/dev/null || true
 
     # Create launcher
     cat > /usr/local/bin/am-login << 'LAUNCHER'

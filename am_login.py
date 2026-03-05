@@ -396,14 +396,23 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    # Ignore SIGINT in production (handled internally)
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
     args = parse_args()
+
+    # Only ignore SIGINT in production (non-demo) mode
+    if not args.demo:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    # Ensure TERM is set (fixes curses init on some terminals/TTYs)
+    if not os.environ.get("TERM"):
+        os.environ["TERM"] = "xterm-256color"
 
     try:
         curses.wrapper(lambda stdscr: AMLogin(stdscr, args).run())
     except KeyboardInterrupt:
         pass
+    except curses.error as e:
+        print(f"\n{APP_NAME}: Terminal error — {e}", file=sys.stderr)
+        print("  Make sure your terminal supports curses (try: export TERM=xterm-256color)", file=sys.stderr)
+        sys.exit(1)
     finally:
         print(f"\n{APP_NAME} v{VERSION} — Goodbye!")
